@@ -45,6 +45,18 @@ benchmarks:
     metric: accuracy
     max_samples: 200
 
+  gpqa_diamond:
+    label: "GPQA Diamond"
+    dataset: bench/data/gpqa_diamond.jsonl
+    metric: accuracy
+    max_samples: 198
+
+  livecode_bench:
+    label: "LiveCode Bench"
+    dataset: bench/data/livecode_bench.jsonl
+    metric: pass@1
+    max_samples: 100
+
   agentworld_bench:
     label: "AgentWorldBench"
     dataset: bench/data/agentworld_bench

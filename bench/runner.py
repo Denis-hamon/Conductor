@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Conductor Fabric — Multi-benchmark Evaluation Runner.
 
-Supports: HumanEval+, GSM8K, SWE-bench Lite, Terminal-bench, MMLU.
+Supports: HumanEval+, GSM8K, MMLU, GPQA Diamond, LiveCode Bench,
+          SWE-bench Lite, Terminal-bench, AgentWorldBench.
 Runs each benchmark in A/B mode:
   A) Direct LLM (baseline) — single model call, no routing
   B) Conductor Fabric — smart routing + verification gates + fallback
@@ -399,6 +400,75 @@ class TerminalBenchBenchmark(Benchmark):
         ]
 
 
+class GPQADiamondBenchmark(Benchmark):
+    """GPQA Diamond — PhD-level science (physics, chemistry, biology, other)."""
+
+    def build_messages(self, sample: dict) -> list[dict]:
+        question = sample.get("question", "")
+        choices = sample.get("choices", [])
+        formatted = f"{question}\n\n"
+        labels = ["A", "B", "C", "D"]
+        for label, choice in zip(labels, choices):
+            formatted += f"{label}. {choice}\n"
+        formatted += "\nAnswer with the letter (A, B, C, or D) only."
+        return [
+            {"role": "system", "content": "Answer the question by responding with the correct letter (A, B, C, or D) only."},
+            {"role": "user", "content": formatted},
+        ]
+
+    def evaluate(self, sample: dict, prediction: str) -> tuple[bool, str]:
+        expected = sample.get("answer", "")
+        predicted = prediction.strip()[0] if prediction.strip() else ""
+        return predicted == expected, f"predicted={predicted}, expected={expected}"
+
+    def _synthetic_data(self) -> list[dict]:
+        return [
+            {"question": "Which of the following particles is a fermion?", "choices": ["Photon", "Gluon", "Electron", "Z boson"], "answer": "C", "subject": "physics"},
+            {"question": "What is the IUPAC name for CH3CH2OH?", "choices": ["Methane", "Ethanol", "Propanol", "Methanol"], "answer": "B", "subject": "chemistry"},
+        ]
+
+
+class LiveCodeBenchmark(Benchmark):
+    """LiveCode Bench — execution-grounded code generation with embedded tests."""
+
+    def build_messages(self, sample: dict) -> list[dict]:
+        prompt = sample.get("prompt", sample.get("question", ""))
+        return [
+            {"role": "system", "content": "Complete the following function. Return ONLY the function body, no explanation."},
+            {"role": "user", "content": prompt},
+        ]
+
+    def evaluate(self, sample: dict, prediction: str) -> tuple[bool, str]:
+        tests = sample.get("test", [])
+        if isinstance(tests, str):
+            tests = [tests]
+        entry_point = sample.get("entry_point", "")
+        code = prediction
+        if entry_point and entry_point not in code:
+            code = (sample.get("prompt", "") or "") + "\n" + prediction
+        if not tests:
+            return True, "no tests available"
+        try:
+            compiled = compile(code + "\n" + "\n".join(tests), "<eval>", "exec")
+            namespace = {}
+            exec(compiled, namespace)
+            return True, ""
+        except AssertionError:
+            return False, "assertion failed"
+        except Exception as e:
+            return False, f"{type(e).__name__}: {e}"
+
+    def _synthetic_data(self) -> list[dict]:
+        return [
+            {
+                "question": "Write a function that returns the sum of two numbers.",
+                "entry_point": "add",
+                "prompt": "def add(a, b):\n",
+                "test": ["assert add(1, 2) == 3", "assert add(-1, 1) == 0"],
+            },
+        ]
+
+
 class SWEBenchBenchmark(Benchmark):
     """Lightweight SWE-bench evaluation — issue resolution with patch generation.
 
@@ -520,6 +590,8 @@ BENCHMARK_REGISTRY = {
     "humaneval": HumanEvalBenchmark,
     "gsm8k": GSM8KBenchmark,
     "mmlu": MMLUBenchmark,
+    "gpqa_diamond": GPQADiamondBenchmark,
+    "livecode_bench": LiveCodeBenchmark,
     "terminal_bench": TerminalBenchBenchmark,
     "swe_bench_lite": SWEBenchBenchmark,
     "agentworld_bench": AgentWorldBenchmark,

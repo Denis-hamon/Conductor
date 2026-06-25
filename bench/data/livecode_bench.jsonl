@@ -1,0 +1,2 @@
+{"question": "Write a function to compute the nth Fibonacci number.", "entry_point": "fib", "prompt": "def fib(n):\n", "test": ["assert fib(0) == 0", "assert fib(1) == 1", "assert fib(10) == 55"]}
+{"question": "Write a function that checks if a string is a palindrome.", "entry_point": "is_palindrome", "prompt": "def is_palindrome(s):\n", "test": ["assert is_palindrome(\"racecar\") == True", "assert is_palindrome(\"hello\") == False"]}

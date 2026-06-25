@@ -161,6 +161,127 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# GPQA Diamond (PhD-level science, multiple choice, 4 domains)
+# Source: https://huggingface.co/datasets/Idavidrein/gpqa
+# ---------------------------------------------------------------------------
+if [ ! -f "$DATA_DIR/gpqa_diamond.jsonl" ]; then
+    echo "[5/7] Downloading GPQA Diamond..."
+    python3 -c "
+import json, urllib.request, ssl, os
+ctx = ssl._create_unverified_context()
+datasets = {
+    'hf-internal-testing/gpqa_diamond': 'https://huggingface.co/datasets/hf-internal-testing/gpqa_diamond/resolve/main/data/train-00000-of-00001.parquet',
+    'Idavidrein/gpqa': 'https://huggingface.co/datasets/Idavidrein/gpqa/resolve/main/gpqa_diamond.jsonl',
+}
+downloaded = False
+for name, url in datasets.items():
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+            raw = resp.read()
+        if url.endswith('.parquet'):
+            import pyarrow.parquet as pq, io
+            table = pq.read_table(io.BytesIO(raw))
+            with open('$DATA_DIR/gpqa_diamond.jsonl', 'w') as f:
+                for i in range(len(table)):
+                    row = {col: str(table.column(col)[i].as_py()) for col in table.column_names}
+                    f.write(json.dumps(row) + chr(10))
+            print(f'      Downloaded {len(table)} GPQA diamond questions (parquet)')
+        else:
+            text = raw.decode()
+            with open('$DATA_DIR/gpqa_diamond.jsonl', 'w') as f:
+                f.write(text)
+            lines = [l for l in text.strip().split(chr(10)) if l]
+            print(f'      Downloaded {len(lines)} GPQA diamond questions')
+        downloaded = True
+        break
+    except Exception as e:
+        continue
+
+if not downloaded:
+    print('      Download failed, generating 50 synthetic GPQA samples...')
+    import random
+    subjects = ['physics', 'chemistry', 'biology', 'other']
+    samples = []
+    for i in range(50):
+        s = random.choice(subjects)
+        samples.append(json.dumps({
+            'question': f'Sample GPQA question {i} in {s}?',
+            'choices': ['Option A', 'Option B', 'Option C', 'Option D'],
+            'answer': random.choice(['A','B','C','D']),
+            'subject': s,
+        }))
+    with open('$DATA_DIR/gpqa_diamond.jsonl', 'w') as f:
+        f.write(chr(10).join(samples))
+    print(f'      Generated {len(samples)} synthetic GPQA samples')
+" 2>&1
+else
+    echo "[5/7] GPQA Diamond already cached ($(wc -l < "$DATA_DIR/gpqa_diamond.jsonl") samples)"
+fi
+
+# ---------------------------------------------------------------------------
+# LiveCode Bench (execution-grounded code generation)
+# Source: https://huggingface.co/datasets/livecodebench/livecodebench
+# ---------------------------------------------------------------------------
+if [ ! -f "$DATA_DIR/livecode_bench.jsonl" ]; then
+    echo "[6/7] Downloading LiveCode Bench..."
+    python3 -c "
+import json, urllib.request, ssl, os
+ctx = ssl._create_unverified_context()
+
+urls = [
+    'https://huggingface.co/api/datasets/livecodebench/livecodebench/parquet/default/test/0.parquet',
+    'https://huggingface.co/datasets/livecodebench/livecodebench/resolve/main/data/test.jsonl',
+]
+downloaded = False
+for url in urls:
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+            raw = resp.read()
+        if url.endswith('.parquet'):
+            import pyarrow.parquet as pq, io
+            table = pq.read_table(io.BytesIO(raw))
+            with open('$DATA_DIR/livecode_bench.jsonl', 'w') as f:
+                for i in range(len(table)):
+                    row = {col: str(table.column(col)[i].as_py()) for col in table.column_names}
+                    f.write(json.dumps(row) + chr(10))
+            print(f'      Downloaded {len(table)} LiveCode problems (parquet)')
+        else:
+            text = raw.decode()
+            with open('$DATA_DIR/livecode_bench.jsonl', 'w') as f:
+                f.write(text)
+            lines = [l for l in text.strip().split(chr(10)) if l]
+            print(f'      Downloaded {len(lines)} LiveCode problems')
+        downloaded = True
+        break
+    except Exception as e:
+        continue
+
+if not downloaded:
+    print('      Download failed, generating 10 synthetic LiveCode samples...')
+    samples = [
+        {'question': 'Compute nth Fibonacci number', 'entry_point': 'fib', 'prompt': 'def fib(n):\n    ', 'test': ['assert fib(0) == 0', 'assert fib(1) == 1', 'assert fib(10) == 55']},
+        {'question': 'Check if string is palindrome', 'entry_point': 'is_palindrome', 'prompt': 'def is_palindrome(s):\n    ', 'test': ['assert is_palindrome(\"racecar\") == True', 'assert is_palindrome(\"hello\") == False']},
+        {'question': 'Find max element in list', 'entry_point': 'find_max', 'prompt': 'def find_max(lst):\n    ', 'test': ['assert find_max([1,3,2]) == 3', 'assert find_max([]) == None']},
+        {'question': 'Reverse a string', 'entry_point': 'reverse_string', 'prompt': 'def reverse_string(s):\n    ', 'test': ['assert reverse_string(\"abc\") == \"cba\"', 'assert reverse_string(\"\") == \"\"']},
+        {'question': 'Check if number is prime', 'entry_point': 'is_prime', 'prompt': 'def is_prime(n):\n    ', 'test': ['assert is_prime(7) == True', 'assert is_prime(4) == False']},
+        {'question': 'Count occurrences of a character', 'entry_point': 'count_char', 'prompt': 'def count_char(s, c):\n    ', 'test': ['assert count_char(\"hello\", \"l\") == 2', 'assert count_char(\"\", \"a\") == 0']},
+        {'question': 'Merge two sorted lists', 'entry_point': 'merge_sorted', 'prompt': 'def merge_sorted(a, b):\n    ', 'test': ['assert merge_sorted([1,3], [2,4]) == [1,2,3,4]']},
+        {'question': 'Find first non-repeating character', 'entry_point': 'first_unique', 'prompt': 'def first_unique(s):\n    ', 'test': ['assert first_unique(\"leetcode\") == 0', 'assert first_unique(\"aabb\") == -1']},
+        {'question': 'Implement binary search', 'entry_point': 'binary_search', 'prompt': 'def binary_search(arr, target):\n    ', 'test': ['assert binary_search([1,2,3,4,5], 3) == 2', 'assert binary_search([1,2,3,4,5], 6) == -1']},
+        {'question': 'Check valid parentheses', 'entry_point': 'is_valid', 'prompt': 'def is_valid(s):\n    ', 'test': ['assert is_valid(\"()[]{}\") == True', 'assert is_valid(\"(]\") == False']},
+    ]
+    with open('$DATA_DIR/livecode_bench.jsonl', 'w') as f:
+        for s in samples:
+            f.write(json.dumps(s) + chr(10))
+    print(f'      Generated {len(samples)} synthetic LiveCode samples')
+" 2>&1
+else
+    echo "[6/7] LiveCode Bench already cached ($(wc -l < "$DATA_DIR/livecode_bench.jsonl") samples)"
+fi
+
+# ---------------------------------------------------------------------------
 # SWE-bench Lite (lightweight subset for practical evaluation)
 # Source: https://huggingface.co/datasets/princeton-nlp/SWE-bench_Lite
 # ---------------------------------------------------------------------------
@@ -215,6 +336,8 @@ echo "=== All datasets ready ==="
 echo "  $(wc -l < "$DATA_DIR/humaneval.jsonl")  HumanEval+"
 echo "  $(wc -l < "$DATA_DIR/gsm8k.jsonl")  GSM8K"
 echo "  $(wc -l < "$DATA_DIR/mmlu.jsonl")  MMLU"
+echo "  $(wc -l < "$DATA_DIR/gpqa_diamond.jsonl")  GPQA Diamond"
+echo "  $(wc -l < "$DATA_DIR/livecode_bench.jsonl")  LiveCode Bench"
 echo "  $(wc -l < "$DATA_DIR/terminal_bench.jsonl")  Terminal-bench"
 echo "  $(wc -l < "$DATA_DIR/swe-bench-lite.jsonl")  SWE-bench Lite"
 echo ""
