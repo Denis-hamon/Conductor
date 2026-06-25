@@ -49,3 +49,4 @@ modelcache/
 
 # Synthetic test data
 bench/data/corpus/
+bench/data/corpus/*.json

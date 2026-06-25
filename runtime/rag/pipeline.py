@@ -1,11 +1,15 @@
-"""Full RAG pipeline — coordinates all retrieval backends into a single flow.
+"""Full RAG pipeline — coordinates all backends + Thompson Sampling.
 
-Two backends, composable:
-  - VectorBackend: hybrid dense+sparse retrieval, cross-document, for scale
-  - PageIndexBackend: reasoning-based tree navigation, intra-document, for precision
+Three backends, composable:
+  - VectorBackend: hybrid dense+sparse, cross-document, for scale
+  - PageIndexBackend: reasoning-based tree navigation, single-doc, for precision
+  - GraphitiBackend: temporal knowledge graph, for entity-aware retrieval
+
+Layer 6 — Thompson Sampling: automatically adjusts alpha, top_k, rerank_k
+based on historical success rates.
 
 Usage:
-    pipeline = RAGPipeline()
+    pipeline = RAGPipeline(use_thompson=True)
     pipeline.ingest(documents)
     results = pipeline.query(query)
     answer = pipeline.answer(query)
@@ -16,6 +20,7 @@ from typing import Optional
 
 from .backends import VectorBackend, PageIndexBackend
 from .router import RetrievalRouter
+from .thompson import ThompsonSampler, ParamConfig
 
 logger = logging.getLogger("rag.pipeline")
 
@@ -33,6 +38,8 @@ class RAGPipeline:
         use_pageindex: bool = False,
         pageindex_workspace: Optional[str] = None,
         pageindex_model: str = "gpt-4o",
+        use_thompson: bool = False,
+        thompson_state_path: Optional[str] = None,
     ):
         self.vector = VectorBackend(
             embed_model=embed_model,
@@ -53,8 +60,14 @@ class RAGPipeline:
             except Exception as e:
                 logger.warning("PageIndex not available (%s)", e)
 
+        self.thompson = ThompsonSampler(state_path=thompson_state_path) if use_thompson else None
         self.router = RetrievalRouter(self.vector, self.pageindex)
-        self.rerank_top_k = rerank_top_k
+
+    @property
+    def current_config(self) -> ParamConfig:
+        if self.thompson:
+            return self.thompson.sample()
+        return ParamConfig(alpha=0.7, top_k=20, rerank_k=10)
 
     def ingest(self, documents: list[dict], backend: str = "auto"):
         if backend in ("auto", "vector"):
@@ -71,7 +84,13 @@ class RAGPipeline:
 
     def query(self, query: str, top_k: Optional[int] = None,
               doc_ids: Optional[list[str]] = None, prefer: str = "auto") -> list[dict]:
-        return self.router.query(query, doc_ids=doc_ids, top_k=top_k or self.rerank_top_k, prefer=prefer)
+        cfg = self.current_config
+        k = top_k or cfg.top_k
+        results = self.router.query(query, doc_ids=doc_ids, top_k=k, prefer=prefer)
+        success = len(results) > 0
+        if self.thompson:
+            self.thompson.update(cfg, success)
+        return results
 
     def answer(self, query: str, llm_complete=None, top_k: int = 5,
                doc_ids: Optional[list[str]] = None) -> dict:
@@ -105,3 +124,13 @@ class RAGPipeline:
             "citations": sources,
             "prompt": prompt,
         }
+
+    def best_config(self) -> ParamConfig:
+        if self.thompson:
+            return self.thompson.best_config()
+        return ParamConfig(alpha=0.7, top_k=20, rerank_k=10)
+
+    def top_configs(self, n: int = 5) -> list[tuple[ParamConfig, float]]:
+        if self.thompson:
+            return self.thompson.top_configs(n)
+        return []

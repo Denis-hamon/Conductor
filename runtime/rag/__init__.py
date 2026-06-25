@@ -2,11 +2,12 @@
 
 Architecture (inspired by HydraDB/Cortex reverse engineering):
 
-  Two composable backends:
-    VectorBackend   — hybrid dense+sparse + cross-encoder reranking (scale)
-    PageIndexBackend — reasoning-based tree navigation over documents (precision)
+  Three composable backends:
+    VectorBackend    — hybrid dense+sparse + cross-encoder reranking (scale)
+    PageIndexBackend — reasoning-based tree navigation (precision, single-doc)
+    GraphitiBackend  — temporal knowledge graph (entities, relationships, time)
 
-  Layers (VectorBackend):
+  Layers:
     1. Chunking:   Semchunk
     2. Knowledge:  In-memory index / Graphiti temporal graph (optional)
     3. Filtering:  Metadata pre-retrieval
@@ -18,6 +19,11 @@ Architecture (inspired by HydraDB/Cortex reverse engineering):
     - Hierarchical tree index from document structure
     - LLM-guided tree search (reasoning-based, not vector similarity)
     - 98.7% on FinanceBench
+
+  Graphiti (optional, for temporal entity-aware retrieval):
+    - Extracts entities and relationships from episodes
+    - Time-weighted graph search
+    - Requires Neo4j
 """
 
 from .pipeline import RAGPipeline
@@ -25,9 +31,11 @@ from .retriever import HybridRetriever, RetrievalResult
 from .reranker import Reranker
 from .embeddings import EmbeddingModel
 from .router import RetrievalRouter
+from .thompson import ThompsonSampler, ParamConfig
 from .backends import VectorBackend, PageIndexBackend
 
 __all__ = [
     "RAGPipeline", "HybridRetriever", "RetrievalResult", "Reranker",
     "EmbeddingModel", "RetrievalRouter", "VectorBackend", "PageIndexBackend",
+    "ThompsonSampler", "ParamConfig",
 ]
