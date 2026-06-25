@@ -43,3 +43,9 @@ training/datasets/
 # Model cache (GPU server)
 /mnt/models/
 modelcache/
+
+# FlashRank model cache
+.flashrank_cache/
+
+# Synthetic test data
+bench/data/corpus/

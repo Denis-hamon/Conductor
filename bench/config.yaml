@@ -71,6 +71,17 @@ evaluation:
   max_retries: 3
   concurrency: 4
 
+# RAG configuration
+rag:
+  backend: advanced        # simple | advanced
+  reranker: flashrank      # none | flashrank | bge-reranker-v2-m3
+  embed_model: all-MiniLM-L6-v2
+  chunk_size: 512
+  search_alpha: 0.7
+  top_k: 20
+  rerank_top_k: 10
+  corpus_dir: bench/data/corpus
+
 # Report output
 report:
   dir: bench/reports
