@@ -31,11 +31,11 @@ urllib.request.urlretrieve('$PARQUET_URL', '$PARQUET_FILE')
 fi
 
 echo "[2/3] Converting Parquet to per-domain JSONL..."
-python3 << 'PYEOF'
+PARQUET_FILE="$PARQUET_FILE" DATA_DIR="$DATA_DIR" python3 << 'PYEOF'
 import json, os, pyarrow.parquet as pq
 
-parquet_path = "$PARQUET_FILE"
-out_dir = "$DATA_DIR"
+parquet_path = os.environ["PARQUET_FILE"]
+out_dir = os.environ["DATA_DIR"]
 
 table = pq.read_table(parquet_path)
 domains = table.column("task").to_pylist()

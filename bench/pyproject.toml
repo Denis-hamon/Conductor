@@ -7,6 +7,9 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["agentworld_eval*"]
+
 [build-system]
 requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"

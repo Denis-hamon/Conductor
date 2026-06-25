@@ -6,8 +6,12 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
-from .task_configs import SCORE_DIMENSIONS, TASK_CONFIGS
-from .output_parser import remove_thinking_tags
+try:
+    from .task_configs import SCORE_DIMENSIONS, TASK_CONFIGS
+    from .output_parser import remove_thinking_tags
+except ImportError:
+    from task_configs import SCORE_DIMENSIONS, TASK_CONFIGS
+    from output_parser import remove_thinking_tags
 
 logger = logging.getLogger("agentworld.judge_parser")
 _PROMPTS_DIR = Path(__file__).absolute().parent / "prompts"
@@ -57,7 +61,7 @@ def load_judge_system_prompts() -> dict:
         if not path:
             prompts[subtask] = ""
             continue
-        full = _PROMPTS_DIR / path
+        full = _PROMPTS_DIR / path.replace("prompts/", "")
         if full.exists():
             prompts[subtask] = full.read_text(encoding="utf-8")
         else:

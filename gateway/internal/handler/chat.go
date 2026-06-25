@@ -83,7 +83,7 @@ func (h *ChatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqID := newRequestID()
 
 	if req.Stream {
-		handleStream(w, req, reqID)
+		handleStream(w, r, req, reqID)
 		return
 	}
 
@@ -109,7 +109,7 @@ func (h *ChatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func handleStream(w http.ResponseWriter, req types.ChatRequest, reqID string) {
+func handleStream(w http.ResponseWriter, r *http.Request, req types.ChatRequest, reqID string) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeError(w, http.StatusInternalServerError, "streaming not supported", "server_error")

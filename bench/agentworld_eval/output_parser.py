@@ -3,53 +3,60 @@
 import re
 from pathlib import Path
 
-from .task_configs import TASK_CONFIGS
+try:
+    from .task_configs import TASK_CONFIGS
+except ImportError:
+    from task_configs import TASK_CONFIGS
 
 _UTILS_DIR = Path(__file__).absolute().parent
+
+
+_RE_THINK_OPEN = re.compile(r"<think(?:ing)?>", re.IGNORECASE)
+_RE_THINK_CLOSE = re.compile(r"</think(?:ing)?>", re.IGNORECASE)
 
 
 def remove_thinking_tags(text: str, response_tag: str) -> str:
     if not text:
         return text
     tags = []
-    for m in re.finditer(r"<think>", text, re.IGNORECASE):
-        tags.append((m.start(), "open"))
-    for m in re.finditer(r"</think>", text, re.IGNORECASE):
-        tags.append((m.start(), "close"))
+    for m in _RE_THINK_OPEN.finditer(text):
+        tags.append((m.start(), "open", m.end()))
+    for m in _RE_THINK_CLOSE.finditer(text):
+        tags.append((m.start(), "close", m.end()))
     if not tags:
         return text
     tags.sort(key=lambda x: x[0])
     ranges_to_remove = []
-    used_indices = set()
-    for i, (pos, tag_type) in enumerate(tags):
-        if i in used_indices:
+    used = set()
+    for i, (pos, kind, end) in enumerate(tags):
+        if i in used:
             continue
-        if tag_type == "open":
+        if kind == "open":
             for j in range(i + 1, len(tags)):
-                if j in used_indices:
+                if j in used:
                     continue
                 if tags[j][1] == "close":
-                    ranges_to_remove.append((pos, tags[j][0] + len("</think>")))
-                    used_indices.add(i)
-                    used_indices.add(j)
+                    ranges_to_remove.append((pos, tags[j][2]))
+                    used.add(i)
+                    used.add(j)
                     break
-    for i, (pos, tag_type) in enumerate(tags):
-        if i in used_indices:
+    for i, (pos, kind, end) in enumerate(tags):
+        if i in used:
             continue
-        if tag_type == "close":
-            ranges_to_remove.append((0, pos + len("</think>")))
-            used_indices.add(i)
-    for i, (pos, tag_type) in enumerate(tags):
-        if i in used_indices:
+        if kind == "close":
+            ranges_to_remove.append((0, end))
+            used.add(i)
+    for i, (pos, kind, end) in enumerate(tags):
+        if i in used:
             continue
-        if tag_type == "open":
-            end_pos = len(text)
+        if kind == "open":
+            stop = len(text)
             if response_tag:
                 m = re.search(rf"<{re.escape(response_tag)}>", text[pos:], re.IGNORECASE)
                 if m:
-                    end_pos = pos + m.start()
-            ranges_to_remove.append((pos, end_pos))
-            used_indices.add(i)
+                    stop = pos + m.start()
+            ranges_to_remove.append((pos, stop))
+            used.add(i)
     if not ranges_to_remove:
         return text
     ranges_to_remove.sort()
