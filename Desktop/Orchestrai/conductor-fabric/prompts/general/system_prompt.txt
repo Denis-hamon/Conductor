@@ -1,0 +1,2 @@
+# system_prompt.txt — general domain
+# Placeholder: define system prompt for general/qa responses

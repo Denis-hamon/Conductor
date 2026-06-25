@@ -1,0 +1,76 @@
+# Tool Registry — MCP domain (legal)
+# Structured tool definitions for PromptAssembler Stage 2.
+# Each tool: name, description, parameters (JSON Schema), return_type, security_constrained.
+
+tools:
+  - name: search_case_law
+    description: Search legal case law database by keywords, jurisdiction, and date range
+    parameters:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Search keywords or natural language query
+        jurisdiction:
+          type: string
+          description: Jurisdiction filter (e.g., "fr", "eu", "us")
+        date_from:
+          type: string
+          description: Start date (YYYY-MM-DD)
+      required:
+        - query
+    return_type: array[CaseLawResult]
+    security_constrained: false
+
+  - name: draft_clause
+    description: Generate a legal clause based on contract type and requirements
+    parameters:
+      type: object
+      properties:
+        contract_type:
+          type: string
+          description: Type of contract (e.g., "nda", "employment", "sale")
+        jurisdiction:
+          type: string
+          description: Governing law jurisdiction
+        parties:
+          type: array
+          items:
+            type: string
+          description: Names of contracting parties
+      required:
+        - contract_type
+        - jurisdiction
+    return_type: string
+    security_constrained: true
+
+  - name: check_compliance
+    description: Verify a document or clause against regulatory requirements (RGPD, etc.)
+    parameters:
+      type: object
+      properties:
+        document_text:
+          type: string
+          description: Text to check
+        regulation:
+          type: string
+          enum: ["rgpd", "sof", "aml", "general"]
+          description: Regulation framework
+      required:
+        - document_text
+        - regulation
+    return_type: ComplianceReport
+    security_constrained: true
+
+  - name: extract_deadlines
+    description: Extract all deadlines and dates from a legal document
+    parameters:
+      type: object
+      properties:
+        document_text:
+          type: string
+          description: Full document text
+      required:
+        - document_text
+    return_type: array[Deadline]
+    security_constrained: false

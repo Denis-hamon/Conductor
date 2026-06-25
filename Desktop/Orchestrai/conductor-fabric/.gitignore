@@ -1,0 +1,45 @@
+# Go
+gateway/bin/
+gateway/vendor/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+conductor/.venv/
+runtime/.venv/
+*.egg
+
+# Docker
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+bench/data/*.parquet
+bench/data/humaneval.jsonl
+bench/data/gsm8k.jsonl
+bench/data/mmlu.jsonl
+bench/data/terminal_bench.jsonl
+bench/data/swe-bench-lite.jsonl
+bench/data/agentworld_bench/
+bench/data/*.parquet
+bench/reports/*.html
+bench/reports/*.json
+bench/reports/*.csv
+training/datasets/
+
+# Model cache (GPU server)
+/mnt/models/
+modelcache/

@@ -1,0 +1,5 @@
+# verifier_config.yaml — rag domain
+weight: 0.7
+citation:
+  required: true
+  min_sources: 1

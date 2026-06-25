@@ -1,0 +1,37 @@
+# CPT Phase 0 — Training configuration
+# Run: python -m training.phase0_cpt.train
+
+model:
+  base: "Qwen/Qwen2.5-0.5B"
+  output_dir: "./training/phase0_cpt/checkpoints"
+  cpt_path: ""  # Set to checkpoint path after training, or via CPT_MODEL_PATH env var
+  torch_dtype: "bfloat16"
+
+data:
+  train_file: "./training/phase0_cpt/data/train_sequences.jsonl"
+  max_length: 2048
+  dataset_repo: null  # Optional: HuggingFace dataset repo to push to
+
+training:
+  batch_size: 8
+  gradient_accumulation_steps: 4
+  learning_rate: 2e-5
+  num_epochs: 3
+  warmup_steps: 100
+  logging_steps: 10
+  save_steps: 500
+  eval_steps: 500
+  max_grad_norm: 1.0
+  weight_decay: 0.01
+
+lora:
+  enabled: true
+  r: 16
+  alpha: 32
+  dropout: 0.05
+
+inference:
+  threshold: 0.7
+  max_tokens: 1024
+  temperature: 0.3
+  top_p: 0.9

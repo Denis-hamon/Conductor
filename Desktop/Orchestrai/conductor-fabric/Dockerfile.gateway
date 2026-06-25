@@ -1,0 +1,10 @@
+FROM golang:1.24-alpine AS builder
+WORKDIR /app
+COPY gateway/ .
+RUN go build -o /gateway ./cmd/
+
+FROM alpine:3.21
+RUN apk --no-cache add ca-certificates
+COPY --from=builder /gateway /gateway
+EXPOSE 8080
+ENTRYPOINT ["/gateway"]

@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (require model pool or ClickHouse)",
+    "slow: Slow tests (performance benchmarks)",
+    "security: Security tests (sandbox escape, PII)",
+    "atdd: ATDD acceptance tests",
+    "chaos: Chaos engineering tests",
+]
+testpaths = ["tests"]

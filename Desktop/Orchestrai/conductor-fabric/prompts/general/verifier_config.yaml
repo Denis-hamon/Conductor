@@ -1,0 +1,7 @@
+# verifier_config.yaml — general domain
+weight: 0.3
+llm_judge:
+  enabled: true
+  model: gemma-3-small
+sandbox:
+  enabled: false

@@ -1,0 +1,66 @@
+# Conductor Fabric — Benchmark Configuration
+
+# Models available for testing
+models:
+  baseline:
+    label: "Direct LLM (no routing)"
+    model_id: qwen-reasoner
+    endpoint: http://localhost:8080/v1/chat/completions
+  conductor:
+    label: "Conductor Fabric"
+    endpoint: http://localhost:8080/v1/chat/completions
+    # Conductor routes through the gateway, which calls the planner
+    # Internally, the gateway routes to conductor:/v1/conductor/plan
+    # Then runtime:/v1/runtime/execute orchestrates the workflow
+
+# Benchmarks to run
+benchmarks:
+  humaneval:
+    label: "HumanEval+"
+    dataset: bench/data/humaneval.jsonl
+    metric: pass@1
+    max_samples: 164
+
+  gsm8k:
+    label: "GSM8K"
+    dataset: bench/data/gsm8k.jsonl
+    metric: accuracy
+    max_samples: 200
+
+  swe_bench_lite:
+    label: "SWE-bench Lite"
+    dataset: bench/data/swe-bench-lite.jsonl
+    metric: resolved
+    max_samples: 50
+
+  terminal_bench:
+    label: "Terminal-bench"
+    dataset: bench/data/terminal_bench.jsonl
+    metric: accuracy
+    max_samples: 100
+
+  mmlu:
+    label: "MMLU"
+    dataset: bench/data/mmlu.jsonl
+    metric: accuracy
+    max_samples: 200
+
+  agentworld_bench:
+    label: "AgentWorldBench"
+    dataset: bench/data/agentworld_bench
+    metric: agentworld_score
+    max_samples: 0
+
+# Evaluation settings
+evaluation:
+  temperature: 0.0
+  max_tokens: 4096
+  timeout: 120
+  max_retries: 3
+  concurrency: 4
+
+# Report output
+report:
+  dir: bench/reports
+  formats: [json, html]
+  include_charts: true

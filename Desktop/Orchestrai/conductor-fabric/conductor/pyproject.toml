@@ -1,0 +1,10 @@
+[project]
+name = "conductor-fabric-conductor"
+version = "0.1.0"
+description = "Conductor - heuristic routing and workflow plan generation"
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"

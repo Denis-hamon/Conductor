@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentworld-sglang
+  labels:
+    app: agentworld-sglang
+    component: world-model
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: agentworld-sglang
+  template:
+    metadata:
+      labels:
+        app: agentworld-sglang
+    spec:
+      containers:
+        - name: sglang
+          image: lmsysorg/sglang:latest
+          args:
+            - "--model-path"
+            - "Qwen/Qwen-AgentWorld-35B-A3B"
+            - "--reasoning-parser"
+            - "qwen3"
+            - "--context-length"
+            - "262144"
+            - "--port"
+            - "8080"
+            - "--language-model-only"
+            - "--trust-remote-code"
+            - "--tensor-parallel-size"
+            - "2"
+            - "--quantization"
+            - "fp8"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          resources:
+            requests:
+              nvidia.com/gpu: 2
+              memory: "64Gi"
+              cpu: "8"
+            limits:
+              nvidia.com/gpu: 2
+              memory: "128Gi"
+              cpu: "16"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 180
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentworld-sglang
+  labels:
+    app: agentworld-sglang
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: agentworld-sglang

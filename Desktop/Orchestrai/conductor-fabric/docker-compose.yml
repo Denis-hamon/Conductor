@@ -1,0 +1,208 @@
+name: conductor-fabric
+
+services:
+  # ──────────────────────────────────────────────
+  # Infrastructure
+  # ──────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${CONDUCTOR_POSTGRES_DB:-conductor}
+      POSTGRES_USER: ${CONDUCTOR_POSTGRES_USER:-conductor}
+      POSTGRES_PASSWORD: ${CONDUCTOR_POSTGRES_PASSWORD:-conductor}
+    ports:
+      - "${CONDUCTOR_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:9
+    command: valkey-server --requirepass ${CONDUCTOR_VALKEY_PASSWORD:-}
+    ports:
+      - "${CONDUCTOR_VALKEY_PORT:-6379}:6379"
+    volumes:
+      - valkeydata:/data
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.1
+    environment:
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      CLICKHOUSE_USER: ${CONDUCTOR_CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CONDUCTOR_CLICKHOUSE_PASSWORD:-}
+    ports:
+      - "${CONDUCTOR_CLICKHOUSE_PORT:-9000}:9000"
+      - "${CONDUCTOR_CLICKHOUSE_HTTP_PORT:-8123}:8123"
+    volumes:
+      - clickhousedata:/var/lib/clickhouse
+
+  # ──────────────────────────────────────────────
+  # Conductor Fabric Services
+  # ──────────────────────────────────────────────
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "${CONDUCTOR_GATEWAY_PORT:-8080}:8080"
+    environment:
+      CONDUCTOR_URL: http://conductor:9090
+      RUNTIME_URL: http://runtime:7070
+      VLLM_CODER_URL: http://vllm-coder:8001
+      VLLM_REASONER_URL: http://vllm-reasoner:8002
+      VLLM_GENERAL_URL: http://vllm-general:8003
+    depends_on:
+      - conductor
+      - runtime
+
+  conductor:
+    build:
+      context: .
+      dockerfile: Dockerfile.conductor
+    ports:
+      - "${CONDUCTOR_CONDUCTOR_PORT:-9090}:9090"
+    environment:
+      CONDUCTOR_PORT: 9090
+
+  runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile.runtime
+    ports:
+      - "${CONDUCTOR_RUNTIME_PORT:-7070}:7070"
+    environment:
+      RUNTIME_PORT: 7070
+      CLICKHOUSE_URL: http://clickhouse:8123
+
+  # ──────────────────────────────────────────────
+  # GPU Model Serving (vLLM)
+  # Requires: NVIDIA driver, nvidia-container-toolkit
+  # GPU 0: Qwen3-Coder-30B-A3B  (fp8, ~17GB)
+  # GPU 1: Qwen3-32B-A3B        (fp8, ~17GB)
+  # GPU 1: Gemma-3-12B          (fp8, ~7GB, shares GPU1)
+  # ──────────────────────────────────────────────
+
+  vllm-coder:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:latest
+    container_name: vllm-coder
+    runtime: nvidia
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - modelcache:/root/.cache/huggingface
+    command:
+      - "--model"
+      - "Qwen/Qwen3-Coder-30B-A3B"
+      - "--quantization"
+      - "fp8"
+      - "--max-model-len"
+      - "65536"
+      - "--gpu-memory-utilization"
+      - "0.90"
+      - "--port"
+      - "8001"
+      - "--host"
+      - "0.0.0.0"
+    ports:
+      - "8001:8001"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]
+              capabilities: [gpu]
+
+  vllm-reasoner:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:latest
+    container_name: vllm-reasoner
+    runtime: nvidia
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - modelcache:/root/.cache/huggingface
+    command:
+      - "--model"
+      - "Qwen/Qwen3-32B-A3B"
+      - "--quantization"
+      - "fp8"
+      - "--max-model-len"
+      - "131072"
+      - "--gpu-memory-utilization"
+      - "0.90"
+      - "--port"
+      - "8002"
+      - "--host"
+      - "0.0.0.0"
+    ports:
+      - "8002:8002"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["1"]
+              capabilities: [gpu]
+
+  vllm-general:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:latest
+    container_name: vllm-general
+    runtime: nvidia
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - modelcache:/root/.cache/huggingface
+    command:
+      - "--model"
+      - "google/gemma-3-12b-it"
+      - "--quantization"
+      - "fp8"
+      - "--max-model-len"
+      - "32768"
+      - "--gpu-memory-utilization"
+      - "0.40"
+      - "--port"
+      - "8003"
+      - "--host"
+      - "0.0.0.0"
+      - "--trust-remote-code"
+      - "--enforce-eager"
+    ports:
+      - "8003:8003"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["1"]
+              capabilities: [gpu]
+
+  # ──────────────────────────────────────────────
+  # Benchmark runner (on-demand)
+  # ──────────────────────────────────────────────
+
+  bench:
+    profiles: ["bench"]
+    build:
+      context: .
+      dockerfile: Dockerfile.bench
+    volumes:
+      - ./bench/reports:/app/bench/reports
+      - ./bench/data:/app/bench/data
+      - ./bench/config.yaml:/app/bench/config.yaml
+    environment:
+      BASELINE_ENDPOINT: http://vllm-reasoner:8002/v1/chat/completions
+      CONDUCTOR_ENDPOINT: http://gateway:8080
+    depends_on:
+      - gateway
+      - vllm-reasoner
+
+volumes:
+  pgdata:
+  valkeydata:
+  clickhousedata:
+  modelcache:

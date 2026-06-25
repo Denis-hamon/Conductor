@@ -1,0 +1,79 @@
+# Conductor Fabric — Model Pool Configuration (L40S)
+# L40S: 48GB VRAM, Ada Lovelace, FP8 support
+# Strategy: maximize throughput per GPU for evaluation workloads
+#
+# Placement:
+#   GPU 0: qwen-coder (17 GB) + conductor (6 GB)     = 23 GB
+#   GPU 1: qwen-reasoner (17 GB) + gemma-3-small (6 GB) = 23 GB
+#
+# Both GPUs loaded simultaneously via vLLM multi-node or separate pools.
+# For benchmarking, deploy one model per GPU for best throughput.
+
+models:
+  - name: qwen-coder
+    engine: vllm
+    model_id: Qwen/Qwen3-Coder-30B-A3B
+    quantization: fp8
+    replicas:
+      min: 1
+      max: 2
+    resources:
+      gpu: "1"
+      gpu_type: l40s
+    context_length: 65536
+    extra_args:
+      - "--max-model-len"
+      - "65536"
+      - "--gpu-memory-utilization"
+      - "0.90"
+    description: "Code generation — primary model for SWE-bench, HumanEval+"
+
+  - name: qwen-reasoner
+    engine: vllm
+    model_id: Qwen/Qwen3-32B-A3B
+    quantization: fp8
+    replicas:
+      min: 1
+      max: 2
+    resources:
+      gpu: "1"
+      gpu_type: l40s
+    context_length: 131072
+    extra_args:
+      - "--max-model-len"
+      - "131072"
+      - "--gpu-memory-utilization"
+      - "0.90"
+    description: "Reasoning — used for GSM8K, MATH, SWE-bench planning"
+
+  - name: gemma-3-small
+    engine: vllm
+    model_id: google/gemma-3-12b-it
+    quantization: fp8
+    replicas:
+      min: 1
+      max: 2
+    resources:
+      gpu: "1"
+      gpu_type: l40s
+    context_length: 32768
+    extra_args:
+      - "--trust-remote-code"
+      - "--gpu-memory-utilization"
+      - "0.90"
+    description: "General — LLM Judge, fallback, general responses"
+
+  - name: conductor
+    engine: sglang
+    model_id: google/gemma-3-12b-it
+    replicas:
+      min: 1
+      max: 2
+    resources:
+      gpu: "1"
+      gpu_type: l40s
+    context_length: 32768
+    extra_args:
+      - "--context-length"
+      - "32768"
+    description: "SGLang backend option for conductor agent"

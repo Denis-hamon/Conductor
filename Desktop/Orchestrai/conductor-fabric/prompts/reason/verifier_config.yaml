@@ -1,0 +1,5 @@
+# verifier_config.yaml — reason domain
+weight: 0.6
+llm_judge:
+  enabled: true
+  model: gemma-3-small

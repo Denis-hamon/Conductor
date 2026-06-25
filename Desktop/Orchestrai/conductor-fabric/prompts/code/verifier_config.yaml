@@ -1,0 +1,5 @@
+# verifier_config.yaml — code domain
+weight: 0.8
+sandbox:
+  enabled: true
+  timeout: 30

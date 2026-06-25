@@ -1,0 +1,2 @@
+# judge_prompt.txt — rag domain
+# Placeholder: define LLM judge prompt for RAG citation evaluation

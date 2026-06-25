@@ -1,0 +1,24 @@
+# Content Type Classification declarations
+# Managed by the Pattern Analyzer (automatic) + human validation.
+# Maturity progression: RED (strict) → ORANGE (proposed) → GREEN (active)
+
+domains:
+  legal:
+    maturity: RED
+    content_types:
+      objective_facts:
+        patterns: []
+        active: false
+      session_data:
+        patterns: []
+        active: false
+
+  code:
+    maturity: RED
+    content_types:
+      objective_facts:
+        patterns: []
+        active: false
+      session_data:
+        patterns: []
+        active: false

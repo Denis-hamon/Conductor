@@ -1,0 +1,45 @@
+# vLLM Helm chart values — Conductor Fabric Model Pool
+# Deployed per-model using pool/models.yaml as source of truth.
+
+image:
+  repository: vllm/vllm-openai
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+resources:
+  limits:
+    nvidia.com/gpu: 1
+  requests:
+    nvidia.com/gpu: 1
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 90
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 10
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 120
+  periodSeconds: 30
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1

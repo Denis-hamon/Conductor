@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WorkflowPlan",
+  "description": "Schema for conductor-generated workflow execution plans",
+  "type": "object",
+  "properties": {
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Step" }
+    },
+    "verification_gates": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/VerificationGate" }
+    },
+    "stop_condition": { "type": "string" }
+  },
+  "required": ["steps", "verification_gates", "stop_condition"],
+  "definitions": {
+    "Step": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["call_agent", "parallel", "verify", "merge", "human_approval"] },
+        "agent": { "type": "string" },
+        "role": { "type": "string" },
+        "budget_tokens": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["type", "agent", "role"]
+    },
+    "VerificationGate": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["sandbox_code", "rag_citation", "llm_judge", "simulated"] },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "required": ["type", "weight"]
+    }
+  }
+}

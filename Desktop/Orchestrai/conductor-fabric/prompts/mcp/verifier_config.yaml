@@ -1,0 +1,5 @@
+# verifier_config.yaml — mcp domain
+weight: 0.5
+simulated:
+  enabled: true
+  confidence_threshold: 0.7

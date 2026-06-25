@@ -1,0 +1,2 @@
+# judge_prompt.txt — mcp domain
+# Placeholder: define LLM judge prompt for MCP tool evaluations

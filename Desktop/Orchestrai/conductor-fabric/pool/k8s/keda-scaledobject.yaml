@@ -1,0 +1,18 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: model-pool-scaledobject
+spec:
+  scaleTargetRef:
+    name: model-pool
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  pollingInterval: 15
+  cooldownPeriod: 300
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus.monitoring.svc:9090
+        query: |
+          sum(rate(vllm:request_queue_depth[1m]))
+        threshold: "10"

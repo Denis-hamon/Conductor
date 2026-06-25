@@ -1,0 +1,2 @@
+# system_prompt.txt — reason domain
+# Placeholder: define system prompt for reasoning/math/logic
